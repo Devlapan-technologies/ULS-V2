@@ -1,0 +1,903 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Laravel Auth API Test</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                    Oxygen, Ubuntu, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                padding: 20px;
+            }
+
+            .container {
+                max-width: 1400px;
+                margin: 0 auto;
+            }
+
+            h1 {
+                color: white;
+                text-align: center;
+                margin-bottom: 30px;
+                font-size: 2.5em;
+                text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+            }
+
+            .status-bar {
+                background: white;
+                border-radius: 10px;
+                padding: 15px;
+                margin-bottom: 20px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex-wrap: wrap;
+            }
+
+            .auth-status {
+                padding: 8px 16px;
+                border-radius: 20px;
+                font-weight: bold;
+            }
+
+            .auth-status.authenticated {
+                background: #10b981;
+                color: white;
+            }
+
+            .auth-status.unauthenticated {
+                background: #ef4444;
+                color: white;
+            }
+
+            .token-info {
+                font-family: monospace;
+                font-size: 0.9em;
+                color: #666;
+                word-break: break-all;
+                max-width: 600px;
+                background: #f3f4f6;
+                padding: 8px;
+                border-radius: 5px;
+            }
+
+            .cookie-info {
+                font-size: 0.9em;
+                color: #666;
+                background: #f3f4f6;
+                padding: 8px;
+                border-radius: 5px;
+                margin-top: 5px;
+            }
+
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+                gap: 20px;
+                margin-top: 20px;
+            }
+
+            .card {
+                background: white;
+                border-radius: 10px;
+                padding: 20px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            }
+
+            .card h2 {
+                margin-bottom: 20px;
+                color: #333;
+                font-size: 1.5em;
+                border-bottom: 2px solid #667eea;
+                padding-bottom: 10px;
+            }
+
+            .card h2 i {
+                margin-right: 10px;
+            }
+
+            .card.admin {
+                border-left: 4px solid #f59e0b;
+            }
+
+            .card.protected {
+                border-left: 4px solid #10b981;
+            }
+
+            .form-group {
+                margin-bottom: 15px;
+            }
+
+            label {
+                display: block;
+                margin-bottom: 5px;
+                color: #666;
+                font-weight: 500;
+            }
+
+            input,
+            select,
+            textarea {
+                width: 100%;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+                font-size: 14px;
+                transition: border-color 0.3s;
+            }
+
+            input:focus,
+            select:focus,
+            textarea:focus {
+                outline: none;
+                border-color: #667eea;
+                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            }
+
+            button {
+                background: #667eea;
+                color: white;
+                border: none;
+                padding: 12px 20px;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 16px;
+                font-weight: 600;
+                width: 100%;
+                transition: background 0.3s;
+            }
+
+            button:hover {
+                background: #5a67d8;
+            }
+
+            button:disabled {
+                background: #ccc;
+                cursor: not-allowed;
+            }
+
+            button.secondary {
+                background: #6b7280;
+            }
+
+            button.secondary:hover {
+                background: #4b5563;
+            }
+
+            .response {
+                margin-top: 15px;
+                padding: 10px;
+                border-radius: 5px;
+                font-family: monospace;
+                font-size: 12px;
+                max-height: 250px;
+                overflow: auto;
+                white-space: pre-wrap;
+                word-break: break-all;
+            }
+
+            .response.success {
+                background: #d4edda;
+                color: #155724;
+                border: 1px solid #c3e6cb;
+            }
+
+            .response.error {
+                background: #f8d7da;
+                color: #721c24;
+                border: 1px solid #f5c6cb;
+            }
+
+            .response.info {
+                background: #d1ecf1;
+                color: #0c5460;
+                border: 1px solid #bee5eb;
+            }
+
+            .info-box {
+                background: #e3f2fd;
+                border-left: 4px solid #2196f3;
+                padding: 15px;
+                margin-bottom: 20px;
+                border-radius: 5px;
+            }
+
+            .info-box h3 {
+                color: #1976d2;
+                margin-bottom: 10px;
+            }
+
+            .info-box p {
+                color: #555;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+
+            .info-box ul {
+                margin-left: 20px;
+                color: #555;
+                font-size: 14px;
+            }
+
+            .test-users {
+                background: white;
+                border-radius: 10px;
+                padding: 15px;
+                margin-bottom: 20px;
+            }
+
+            .test-users h3 {
+                color: #333;
+                margin-bottom: 10px;
+            }
+
+            .test-users pre {
+                background: #f3f4f6;
+                padding: 10px;
+                border-radius: 5px;
+                overflow-x: auto;
+            }
+
+            .flex-row {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 15px;
+            }
+
+            .flex-row button {
+                width: auto;
+                flex: 1;
+            }
+
+            .cookie-manager {
+                background: #f3f4f6;
+                padding: 10px;
+                border-radius: 5px;
+                margin-bottom: 15px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🔐 Laravel Auth API Test Interface</h1>
+
+            <div class="status-bar">
+                <div>
+                    <span class="auth-status unauthenticated" id="authStatus"
+                        >Unauthenticated</span
+                    >
+                    <span style="margin-left: 10px; color: #666"
+                        >Server: http://127.0.0.1:8000</span
+                    >
+                </div>
+                <div>
+                    <div class="token-info" id="tokenDisplay">
+                        No token in cookie
+                    </div>
+                    <div class="cookie-info" id="cookieDisplay">
+                        Loading cookies...
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <h3>📋 API Information</h3>
+                <p><strong>Base URL:</strong> http://127.0.0.1:8000/api</p>
+                <p>
+                    <strong>Authentication:</strong> JWT tokens stored in
+                    HTTP-only cookies
+                </p>
+                <p><strong>Testing Steps:</strong></p>
+                <ul>
+                    <li>
+                        1. Login with valid credentials (the token will be
+                        stored in a cookie)
+                    </li>
+                    <li>
+                        2. Test protected endpoints (Change Password, Logout)
+                    </li>
+                    <li>
+                        3. Test admin endpoints (Create User, Unlock User) -
+                        requires admin privileges
+                    </li>
+                </ul>
+            </div>
+
+            <div class="test-users">
+                <h3>📝 Test User Credentials</h3>
+                <p>
+                    <em
+                        >Create these users first using the admin panel or
+                        database seeder</em
+                    >
+                </p>
+                <pre>
+Regular User:
+  Email: user@example.com
+  Password: password123
+
+Admin User:
+  Email: admin@example.com  
+  Password: admin123
+
+Weak Password User (will trigger must_change_password):
+  Email: weak@example.com
+  Password: 123456
+            </pre
+                >
+            </div>
+
+            <div class="grid">
+                <!-- Login Card -->
+                <div class="card">
+                    <h2><i>🔑</i> Login</h2>
+                    <form id="loginForm">
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input
+                                type="email"
+                                id="email"
+                                name="email"
+                                required
+                                placeholder="user@example.com"
+                                value="admin@example.com"
+                            />
+                        </div>
+                        <div class="form-group">
+                            <label for="password">Password</label>
+                            <input
+                                type="password"
+                                id="password"
+                                name="password"
+                                required
+                                placeholder="••••••••"
+                                value="admin123"
+                            />
+                        </div>
+                        <button type="submit">Login</button>
+                    </form>
+                    <div id="loginResponse" class="response"></div>
+                </div>
+
+                <!-- Change Password Card (Protected) -->
+                <div class="card protected">
+                    <h2><i>🔄</i> Change Password</h2>
+                    <form id="changePasswordForm">
+                        <div class="form-group">
+                            <label for="user_id">User ID</label>
+                            <input
+                                type="number"
+                                id="user_id"
+                                name="user_id"
+                                required
+                                placeholder="1"
+                                value="1"
+                            />
+                        </div>
+                        <div class="form-group">
+                            <label for="new_password">New Password</label>
+                            <input
+                                type="password"
+                                id="new_password"
+                                name="new_password"
+                                required
+                                placeholder="New password"
+                                value="NewStrongPass123!"
+                            />
+                        </div>
+                        <button type="submit" id="changePasswordBtn">
+                            Change Password
+                        </button>
+                    </form>
+                    <div id="changePasswordResponse" class="response"></div>
+                </div>
+
+                <!-- Logout Card (Protected) -->
+                <div class="card protected">
+                    <h2><i>🚪</i> Logout</h2>
+                    <form id="logoutForm">
+                        <p style="margin-bottom: 15px; color: #666">
+                            Click to logout and invalidate your token.
+                        </p>
+                        <button type="submit" id="logoutBtn" class="secondary">
+                            Logout
+                        </button>
+                    </form>
+                    <div id="logoutResponse" class="response"></div>
+                </div>
+
+                <!-- Create User Card (Admin) -->
+                <div class="card admin">
+                    <h2><i>👤</i> Create User (Admin)</h2>
+                    <form id="createUserForm">
+                        <div class="form-group">
+                            <label for="create_email">Email</label>
+                            <input
+                                type="email"
+                                id="create_email"
+                                name="email"
+                                required
+                                placeholder="newuser@example.com"
+                                value="test{{ random() }}@example.com"
+                            />
+                        </div>
+                        <div class="form-group">
+                            <label for="create_password">Password</label>
+                            <input
+                                type="password"
+                                id="create_password"
+                                name="password"
+                                required
+                                placeholder="Password"
+                                value="TestPass123!"
+                            />
+                        </div>
+                        <div class="form-group">
+                            <label for="employee_id">Employee ID</label>
+                            <input
+                                type="text"
+                                id="employee_id"
+                                name="employee_id"
+                                required
+                                placeholder="EMP001"
+                                value="EMP{{ random(100,999) }}"
+                            />
+                        </div>
+                        <button type="submit" id="createUserBtn">
+                            Create User
+                        </button>
+                    </form>
+                    <div id="createUserResponse" class="response"></div>
+                </div>
+
+                <!-- Unlock User Card (Admin) -->
+                <div class="card admin">
+                    <h2><i>🔓</i> Unlock User (Admin)</h2>
+                    <form id="unlockUserForm">
+                        <div class="form-group">
+                            <label for="unlock_user_id">User ID</label>
+                            <input
+                                type="number"
+                                id="unlock_user_id"
+                                name="user_id"
+                                required
+                                placeholder="User ID to unlock"
+                                value="2"
+                            />
+                        </div>
+                        <button type="submit" id="unlockUserBtn">
+                            Unlock User
+                        </button>
+                    </form>
+                    <div id="unlockUserResponse" class="response"></div>
+                </div>
+
+                <!-- Cookie Manager Card -->
+                <div class="card">
+                    <h2><i>🍪</i> Cookie Manager</h2>
+                    <div class="cookie-manager" id="cookieManager">
+                        <p><strong>Current Cookies:</strong></p>
+                        <div id="cookieList">Loading...</div>
+                    </div>
+                    <div class="flex-row">
+                        <button id="refreshCookiesBtn" class="secondary">
+                            Refresh Cookies
+                        </button>
+                        <button id="clearCookieBtn" class="secondary">
+                            Clear Token Cookie
+                        </button>
+                    </div>
+                    <div id="cookieResponse" class="response info"></div>
+                </div>
+
+                <!-- Test Weak Password Card -->
+                <div class="card">
+                    <h2><i>⚠️</i> Test Weak Password</h2>
+                    <form id="weakPasswordForm">
+                        <div class="form-group">
+                            <label for="weak_email">Email</label>
+                            <input
+                                type="email"
+                                id="weak_email"
+                                placeholder="weak@example.com"
+                                value="weak@example.com"
+                            />
+                        </div>
+                        <div class="form-group">
+                            <label for="weak_password">Weak Password</label>
+                            <input
+                                type="password"
+                                id="weak_password"
+                                placeholder="123456"
+                                value="123456"
+                            />
+                        </div>
+                        <button type="submit" id="testWeakBtn">
+                            Test Login (Weak Password)
+                        </button>
+                    </form>
+                    <div id="weakPasswordResponse" class="response"></div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Configuration
+            const baseUrl = "http://127.0.0.1:8000/api";
+
+            // Helper function to get all cookies
+            function getCookies() {
+                return document.cookie.split(";").reduce((cookies, cookie) => {
+                    const [name, value] = cookie.trim().split("=");
+                    if (name) cookies[name] = value;
+                    return cookies;
+                }, {});
+            }
+
+            // Helper function to get cookie value
+            function getCookie(name) {
+                const cookies = getCookies();
+                return cookies[name] || null;
+            }
+
+            // Generate random number for test data
+            function random(min = 100, max = 999) {
+                return Math.floor(Math.random() * (max - min + 1)) + min;
+            }
+
+            // Update random values in forms
+            function updateRandomValues() {
+                document.getElementById("employee_id").value =
+                    `EMP${random(100, 999)}`;
+                document.getElementById("create_email").value =
+                    `test${random(1000, 9999)}@example.com`;
+            }
+
+            // Update cookie display
+            function updateCookieDisplay() {
+                const cookies = getCookies();
+                const cookieList = document.getElementById("cookieList");
+                const tokenDisplay = document.getElementById("tokenDisplay");
+                const authStatus = document.getElementById("authStatus");
+
+                if (Object.keys(cookies).length === 0) {
+                    cookieList.innerHTML =
+                        '<p style="color: #999;">No cookies found</p>';
+                } else {
+                    let html = '<ul style="list-style: none; padding: 0;">';
+                    for (let [name, value] of Object.entries(cookies)) {
+                        let displayValue = value;
+                        if (name === "token" && value.length > 20) {
+                            displayValue = value.substring(0, 20) + "...";
+                        }
+                        html += `<li><strong>${name}:</strong> ${displayValue}</li>`;
+                    }
+                    html += "</ul>";
+                    cookieList.innerHTML = html;
+                }
+
+                // Update token display
+                const token = getCookie("token");
+                if (token) {
+                    tokenDisplay.textContent = `Token: ${token.substring(0, 30)}... (${token.length} chars)`;
+                    authStatus.textContent = "Authenticated";
+                    authStatus.className = "auth-status authenticated";
+                } else {
+                    tokenDisplay.textContent = "No token in cookie";
+                    authStatus.textContent = "Unauthenticated";
+                    authStatus.className = "auth-status unauthenticated";
+                }
+
+                document.getElementById("cookieDisplay").textContent =
+                    `Cookie string: ${document.cookie || "(empty)"}`;
+            }
+
+            // Helper function to make API requests
+            async function apiRequest(
+                endpoint,
+                method,
+                data = null,
+                showResponse = true,
+            ) {
+                const url = `${baseUrl}${endpoint}`;
+
+                const headers = {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                    "X-Requested-With": "XMLHttpRequest",
+                };
+
+                const options = {
+                    method: method,
+                    headers: headers,
+                    credentials: "include", // Important: This sends cookies
+                    mode: "cors",
+                };
+
+                if (data) {
+                    options.body = JSON.stringify(data);
+                }
+
+                try {
+                    console.log(`Making ${method} request to ${url}`, options);
+                    const response = await fetch(url, options);
+                    let responseData;
+
+                    const contentType = response.headers.get("content-type");
+                    if (
+                        contentType &&
+                        contentType.includes("application/json")
+                    ) {
+                        responseData = await response.json();
+                    } else {
+                        responseData = await response.text();
+                    }
+
+                    updateCookieDisplay();
+
+                    return {
+                        ok: response.ok,
+                        status: response.status,
+                        statusText: response.statusText,
+                        data: responseData,
+                        headers: Object.fromEntries(response.headers.entries()),
+                    };
+                } catch (error) {
+                    console.error("API Request Error:", error);
+                    updateCookieDisplay();
+
+                    return {
+                        ok: false,
+                        error: error.message,
+                        data: null,
+                    };
+                }
+            }
+
+            // Initialize
+            updateCookieDisplay();
+            updateRandomValues();
+
+            // ===== LOGIN FORM =====
+            document
+                .getElementById("loginForm")
+                .addEventListener("submit", async (e) => {
+                    e.preventDefault();
+
+                    const email = document.getElementById("email").value;
+                    const password = document.getElementById("password").value;
+
+                    const responseDiv =
+                        document.getElementById("loginResponse");
+                    responseDiv.innerHTML = "⏳ Loading...";
+                    responseDiv.className = "response";
+
+                    const result = await apiRequest("/login", "POST", {
+                        email,
+                        password,
+                    });
+
+                    if (result.ok) {
+                        responseDiv.className = "response success";
+                        responseDiv.innerHTML = `<strong>✅ Success!</strong> (Status: ${result.status})<br><pre>${JSON.stringify(result.data, null, 2)}</pre>`;
+
+                        // Show headers for debugging
+                        if (result.headers["set-cookie"]) {
+                            responseDiv.innerHTML += `<br><strong>Set-Cookie:</strong> ${result.headers["set-cookie"]}`;
+                        }
+
+                        // Clear form
+                        document.getElementById("email").value = "";
+                        document.getElementById("password").value = "";
+                    } else {
+                        responseDiv.className = "response error";
+                        responseDiv.innerHTML = `<strong>❌ Error!</strong> (Status: ${result.status || "Network Error"})<br><pre>${JSON.stringify(result.data || { error: result.error }, null, 2)}</pre>`;
+                    }
+                });
+
+            // ===== CHANGE PASSWORD FORM =====
+            document
+                .getElementById("changePasswordForm")
+                .addEventListener("submit", async (e) => {
+                    e.preventDefault();
+
+                    const user_id = document.getElementById("user_id").value;
+                    const new_password =
+                        document.getElementById("new_password").value;
+
+                    const responseDiv = document.getElementById(
+                        "changePasswordResponse",
+                    );
+                    responseDiv.innerHTML = "⏳ Loading...";
+                    responseDiv.className = "response";
+
+                    const result = await apiRequest(
+                        "/change-password",
+                        "POST",
+                        { user_id, new_password },
+                    );
+
+                    if (result.ok) {
+                        responseDiv.className = "response success";
+                        responseDiv.innerHTML = `<strong>✅ Success!</strong> (Status: ${result.status})<br><pre>${JSON.stringify(result.data, null, 2)}</pre>`;
+                        document.getElementById("new_password").value = "";
+                    } else {
+                        responseDiv.className = "response error";
+                        responseDiv.innerHTML = `<strong>❌ Error!</strong> (Status: ${result.status || "Network Error"})<br><pre>${JSON.stringify(result.data || { error: result.error }, null, 2)}</pre>`;
+                    }
+                });
+
+            // ===== LOGOUT FORM =====
+            document
+                .getElementById("logoutForm")
+                .addEventListener("submit", async (e) => {
+                    e.preventDefault();
+
+                    const responseDiv =
+                        document.getElementById("logoutResponse");
+                    responseDiv.innerHTML = "⏳ Loading...";
+                    responseDiv.className = "response";
+
+                    const result = await apiRequest("/logout", "POST");
+
+                    if (result.ok) {
+                        responseDiv.className = "response success";
+                        responseDiv.innerHTML = `<strong>✅ Success!</strong> (Status: ${result.status})<br><pre>${JSON.stringify(result.data, null, 2)}</pre>`;
+
+                        // Manually clear token cookie as backup
+                        document.cookie =
+                            "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                        updateCookieDisplay();
+                    } else {
+                        responseDiv.className = "response error";
+                        responseDiv.innerHTML = `<strong>❌ Error!</strong> (Status: ${result.status || "Network Error"})<br><pre>${JSON.stringify(result.data || { error: result.error }, null, 2)}</pre>`;
+                    }
+                });
+
+            // ===== CREATE USER FORM =====
+            document
+                .getElementById("createUserForm")
+                .addEventListener("submit", async (e) => {
+                    e.preventDefault();
+
+                    const email = document.getElementById("create_email").value;
+                    const password =
+                        document.getElementById("create_password").value;
+                    const employee_id =
+                        document.getElementById("employee_id").value;
+
+                    const responseDiv =
+                        document.getElementById("createUserResponse");
+                    responseDiv.innerHTML = "⏳ Loading...";
+                    responseDiv.className = "response";
+
+                    const result = await apiRequest(
+                        "/admin/create-user",
+                        "POST",
+                        {
+                            email,
+                            password,
+                            employee_id,
+                        },
+                    );
+
+                    if (result.ok) {
+                        responseDiv.className = "response success";
+                        responseDiv.innerHTML = `<strong>✅ Success!</strong> (Status: ${result.status})<br><pre>${JSON.stringify(result.data, null, 2)}</pre>`;
+                        updateRandomValues(); // Generate new random values for next test
+                    } else {
+                        responseDiv.className = "response error";
+                        responseDiv.innerHTML = `<strong>❌ Error!</strong> (Status: ${result.status || "Network Error"})<br><pre>${JSON.stringify(result.data || { error: result.error }, null, 2)}</pre>`;
+                    }
+                });
+
+            // ===== UNLOCK USER FORM =====
+            document
+                .getElementById("unlockUserForm")
+                .addEventListener("submit", async (e) => {
+                    e.preventDefault();
+
+                    const user_id =
+                        document.getElementById("unlock_user_id").value;
+
+                    const responseDiv =
+                        document.getElementById("unlockUserResponse");
+                    responseDiv.innerHTML = "⏳ Loading...";
+                    responseDiv.className = "response";
+
+                    const result = await apiRequest(
+                        "/admin/unlock-user",
+                        "POST",
+                        { user_id },
+                    );
+
+                    if (result.ok) {
+                        responseDiv.className = "response success";
+                        responseDiv.innerHTML = `<strong>✅ Success!</strong> (Status: ${result.status})<br><pre>${JSON.stringify(result.data, null, 2)}</pre>`;
+                    } else {
+                        responseDiv.className = "response error";
+                        responseDiv.innerHTML = `<strong>❌ Error!</strong> (Status: ${result.status || "Network Error"})<br><pre>${JSON.stringify(result.data || { error: result.error }, null, 2)}</pre>`;
+                    }
+                });
+
+            // ===== WEAK PASSWORD TEST =====
+            document
+                .getElementById("weakPasswordForm")
+                .addEventListener("submit", async (e) => {
+                    e.preventDefault();
+
+                    const email = document.getElementById("weak_email").value;
+                    const password =
+                        document.getElementById("weak_password").value;
+
+                    const responseDiv = document.getElementById(
+                        "weakPasswordResponse",
+                    );
+                    responseDiv.innerHTML = "⏳ Loading...";
+                    responseDiv.className = "response";
+
+                    const result = await apiRequest("/login", "POST", {
+                        email,
+                        password,
+                    });
+
+                    if (result.ok) {
+                        responseDiv.className = "response success";
+                        responseDiv.innerHTML = `<strong>✅ Login successful!</strong><br><pre>${JSON.stringify(result.data, null, 2)}</pre>`;
+
+                        // Check if must_change_password is true
+                        if (
+                            result.data.user &&
+                            result.data.user.must_change_password
+                        ) {
+                            responseDiv.innerHTML += `<br><strong>⚠️ Note:</strong> User must change password (weak password detected)`;
+                        }
+                    } else {
+                        responseDiv.className = "response error";
+                        responseDiv.innerHTML = `<strong>❌ Login failed!</strong><br><pre>${JSON.stringify(result.data || { error: result.error }, null, 2)}</pre>`;
+                    }
+                });
+
+            // ===== COOKIE MANAGER =====
+            document
+                .getElementById("refreshCookiesBtn")
+                .addEventListener("click", () => {
+                    updateCookieDisplay();
+                    const responseDiv =
+                        document.getElementById("cookieResponse");
+                    responseDiv.innerHTML = "✅ Cookies refreshed";
+                    setTimeout(() => {
+                        responseDiv.innerHTML = "";
+                    }, 3000);
+                });
+
+            document
+                .getElementById("clearCookieBtn")
+                .addEventListener("click", () => {
+                    document.cookie =
+                        "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                    updateCookieDisplay();
+                    const responseDiv =
+                        document.getElementById("cookieResponse");
+                    responseDiv.innerHTML = "✅ Token cookie cleared";
+                    setTimeout(() => {
+                        responseDiv.innerHTML = "";
+                    }, 3000);
+                });
+
+            // Refresh cookie display every 5 seconds
+            setInterval(updateCookieDisplay, 5000);
+        </script>
+    </body>
+</html>
