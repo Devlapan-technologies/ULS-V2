@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use Illuminate\Support\Facades\Mail;
 
 /*
 |--------------------------------------------------------------------------
@@ -41,3 +42,7 @@ Route::middleware(['auth:api'])->group(function () {
         Route::post('unlock-user', [AuthController::class, 'unlockUser']);
     });
 });
+
+
+
+

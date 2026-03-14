@@ -10,6 +10,10 @@ use App\Models\User;
 use App\Services\UserService;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\LoginAlert;
+use App\Mail\PasswordChangedAlert;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
@@ -34,6 +38,15 @@ public function login(LoginRequest $request)
     }
 
     $token = JWTAuth::fromUser($result['user']);
+
+    // 👇 ADD THIS: Send login alert email
+    try {
+        Mail::to($result['user']->email)->send(new LoginAlert($result['user'], $request->ip()));
+        Log::info('Login alert sent to: ' . $result['user']->email);
+    } catch (\Exception $e) {
+        // Log error but don't stop login
+        Log::error('Failed to send login email: ' . $e->getMessage());
+    }
 
     // Return response WITH cookie
     return response()->json([
@@ -68,6 +81,14 @@ public function changePassword(ChangePasswordRequest $request)
 
     if (!$success) {
         return response()->json(['message' => 'Password is weak or common.'], 400);
+    }
+
+    // 👇 ADD THIS: Send password change alert email
+    try {
+        Mail::to($user->email)->send(new PasswordChangedAlert($user));
+        Log::info('Password change alert sent to: ' . $user->email);
+    } catch (\Exception $e) {
+        Log::error('Failed to send password change email: ' . $e->getMessage());
     }
 
     // 👇 Generate a NEW token with updated user data
