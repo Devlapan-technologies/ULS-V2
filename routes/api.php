@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
-use Illuminate\Support\Facades\Mail;
 
 /*
 |--------------------------------------------------------------------------
@@ -44,5 +43,24 @@ Route::middleware(['auth:api'])->group(function () {
 });
 
 
+use Illuminate\Support\Facades\Mail;
 
-
+Route::get('/test-email', function() {
+    try {
+        Mail::raw('This is a test email from your Laravel API', function($message) {
+            $message->to('luswenyomafenyeho@gmail.com') // Use YOUR email here
+                    ->subject('Test Email from ' . config('app.name'));
+        });
+        return response()->json([
+            'success' => true, 
+            'message' => 'Test email sent successfully'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false, 
+            'error' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine()
+        ], 500);
+    }
+});

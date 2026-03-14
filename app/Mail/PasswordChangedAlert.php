@@ -28,7 +28,7 @@ class PasswordChangedAlert extends Mailable
      */
     public function build()
     {
-        return $this->subject('🔒 Your Password Was Changed - ' . config('app.name'))
+        return $this->subject('🔒 Your Password Was Changed' )
                     ->view('emails.password-changed');
     }
 }
