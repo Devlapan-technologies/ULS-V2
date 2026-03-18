@@ -23,14 +23,14 @@ Route::post('login', [AuthController::class, 'login']);
 
 // ===== PROTECTED ROUTES =====
 Route::middleware(['auth:api'])->group(function () {
-
-
-
     // Change own password
     Route::post('change-password', [AuthController::class, 'changePassword']);
 
     // Logout
     Route::post('logout', [AuthController::class, 'logout']);
+
+    // 👇 ADD THIS: Get all users (for Access Control)
+    Route::get('users', [AuthController::class, 'getAllUsers']);
 
     // ===== ADMIN ROUTES =====
     Route::prefix('admin')->group(function () {
@@ -43,24 +43,3 @@ Route::middleware(['auth:api'])->group(function () {
 });
 
 
-use Illuminate\Support\Facades\Mail;
-
-Route::get('/test-email', function() {
-    try {
-        Mail::raw('This is a test email from your Laravel API', function($message) {
-            $message->to('luswenyomafenyeho@gmail.com') // Use YOUR email here
-                    ->subject('Test Email from ' . config('app.name'));
-        });
-        return response()->json([
-            'success' => true, 
-            'message' => 'Test email sent successfully'
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false, 
-            'error' => $e->getMessage(),
-            'file' => $e->getFile(),
-            'line' => $e->getLine()
-        ], 500);
-    }
-});

@@ -131,6 +131,27 @@ public function createUser(CreateUserRequest $request)
     ], 201);
 }
 
+
+public function getAllUsers(Request $request)
+{
+    try {
+        // Only select columns that actually exist in your table
+        $users = User::all(['id', 'email', 'employee_id', 'status', 'must_change_password', 'last_login_at']);
+        
+        return response()->json([
+            'success' => true,
+            'users' => $users
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to fetch users: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+
+
 public function logout(Request $request)
 {
     try {
