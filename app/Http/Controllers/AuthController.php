@@ -39,14 +39,16 @@ public function login(LoginRequest $request)
 
     $token = JWTAuth::fromUser($result['user']);
 
-    // 👇 ADD THIS: Send login alert email
-    try {
+    /*
+        try {
         Mail::to($result['user']->email)->send(new LoginAlert($result['user'], $request->ip()));
         Log::info('Login alert sent to: ' . $result['user']->email);
     } catch (\Exception $e) {
         // Log error but don't stop login
         Log::error('Failed to send login email: ' . $e->getMessage());
     }
+
+    */
 
     // Return response WITH cookie
     return response()->json([

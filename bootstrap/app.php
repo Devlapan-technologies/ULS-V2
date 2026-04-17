@@ -12,7 +12,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Add this line to rate limit API routes
+   
         $middleware->api(prepend: [
             'throttle:50,1'
         ]);
