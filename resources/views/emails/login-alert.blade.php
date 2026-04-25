@@ -87,7 +87,7 @@
         </div>
         
         <div class="greeting">
-            Hello <strong>{{ $user->email }}</strong>,
+            Hello <strong>{{ $name }}</strong>,
         </div>
         
         <p style="margin: 0 0 16px 0; font-size: 14px; color: #374151;">

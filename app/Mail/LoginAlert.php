@@ -12,6 +12,7 @@ class LoginAlert extends Mailable
     use Queueable, SerializesModels;
 
     public $user;
+    public $name;
     public $ip;
     public $time;
 
@@ -21,6 +22,7 @@ class LoginAlert extends Mailable
     public function __construct(User $user, $ip)
     {
         $this->user = $user;
+        $this->name = $user->first_name; // Get first name from HR API
         $this->ip = $ip;
         $this->time = now()->format('F j, Y, g:i a');
     }

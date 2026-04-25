@@ -12,6 +12,7 @@ class PasswordChangedAlert extends Mailable
     use Queueable, SerializesModels;
 
     public $user;
+    public $name;
     public $time;
 
     /**
@@ -20,6 +21,7 @@ class PasswordChangedAlert extends Mailable
     public function __construct(User $user)
     {
         $this->user = $user;
+        $this->name = $user->first_name; // Get first name from HR API
         $this->time = now()->format('F j, Y, g:i a');
     }
 
@@ -28,7 +30,7 @@ class PasswordChangedAlert extends Mailable
      */
     public function build()
     {
-        return $this->subject('🔒 Your Password Was Changed' )
+        return $this->subject('🔒 Your Password Was Changed')
                     ->view('emails.password-changed');
     }
 }

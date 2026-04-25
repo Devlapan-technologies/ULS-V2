@@ -25,165 +25,197 @@ class AuthController extends Controller
     }
 
     // ===== LOGIN =====
-// In app/Http/Controllers/AuthController.php
+    public function login(LoginRequest $request)
+    {
+        $data = $request->validated();
 
-public function login(LoginRequest $request)
-{
-    $data = $request->validated();
+        $result = $this->userService->login($data['email'], $data['password']);
 
-    $result = $this->userService->login($data['email'], $data['password']);
+        if (!$result['success']) {
+            return response()->json(['message' => $result['message']], 401);
+        }
 
-    if (!$result['success']) {
-        return response()->json(['message' => $result['message']], 401);
-    }
+        $token = JWTAuth::fromUser($result['user']);
 
-    $token = JWTAuth::fromUser($result['user']);
-
-    /*
+        // Send login alert email
         try {
-        Mail::to($result['user']->email)->send(new LoginAlert($result['user'], $request->ip()));
-        Log::info('Login alert sent to: ' . $result['user']->email);
-    } catch (\Exception $e) {
-        // Log error but don't stop login
-        Log::error('Failed to send login email: ' . $e->getMessage());
+            Mail::to($result['user']->email)->send(new LoginAlert($result['user'], $request->ip()));
+            Log::info('Login alert sent to: ' . $result['user']->email);
+        } catch (\Exception $e) {
+            // Log error but don't stop login
+            Log::error('Failed to send login email: ' . $e->getMessage());
+        }
+
+        // Return response WITH cookie
+        return response()->json([
+            'message' => $result['message'],
+            'user' => [
+                'id' => $result['user']->id,
+                'email' => $result['user']->email,
+                'employee_id' => $result['user']->employee_id,
+                'must_change_password' => $result['user']->must_change_password,
+                'status' => $result['user']->status,
+                'full_name' => $result['user']->full_name,
+                'first_name' => $result['user']->first_name,
+                'last_name' => $result['user']->last_name,
+            ],
+        ])->cookie(
+            'token',        // Cookie name
+            $token,         // The JWT token
+            60,             // Minutes until expiration (60 = 1 hour)
+            '/',            // Path - available on all routes
+            null,           // Domain - current domain
+            false,          // Secure - only send over HTTPS (set to false for local dev)
+            true,           // HttpOnly - JavaScript CANNOT access this cookie
+            false,          // Raw
+            'lax'          // SameSite policy
+        );
     }
 
-    */
+    public function changePassword(ChangePasswordRequest $request)
+    {
+        $data = $request->validated();
 
-    // Return response WITH cookie
-    return response()->json([
-        'message' => $result['message'],
-        'user' => [
-            'id' => $result['user']->id,
-            'email' => $result['user']->email,
-            'employee_id' => $result['user']->employee_id,
-            'must_change_password' => $result['user']->must_change_password,
-            'status' => $result['user']->status,
-        ],
-    ])->cookie(
-        'token',        // Cookie name
-        $token,         // The JWT token
-        60,             // Minutes until expiration (60 = 1 hour)
-        '/',            // Path - available on all routes
-        null,           // Domain - current domain
-        false,           // Secure - only send over HTTPS (set to false for local dev)
-        true,           // HttpOnly - JavaScript CANNOT access this cookie
-        false,          // Raw
-        'lax'          // SameSite policy
-    );
-}
+        $user = User::find($data['user_id']);
 
-public function changePassword(ChangePasswordRequest $request)
-{
-    $data = $request->validated();
+        $success = $this->userService->changePassword($user, $data['new_password']);
 
-    $user = User::find($data['user_id']);
+        if (!$success) {
+            return response()->json(['message' => 'Password is weak or common.'], 400);
+        }
 
-    $success = $this->userService->changePassword($user, $data['new_password']);
+        // Send password change alert email
+        try {
+            Mail::to($user->email)->send(new PasswordChangedAlert($user));
+            Log::info('Password change alert sent to: ' . $user->email);
+        } catch (\Exception $e) {
+            Log::error('Failed to send password change email: ' . $e->getMessage());
+        }
 
-    if (!$success) {
-        return response()->json(['message' => 'Password is weak or common.'], 400);
+        // Generate a NEW token with updated user data
+        $newToken = JWTAuth::fromUser($user->fresh());
+
+        // Return response WITH NEW cookie
+        return response()->json([
+            'message' => 'Password updated successfully.',
+            'user' => [
+                'id' => $user->id,
+                'email' => $user->email,
+                'employee_id' => $user->employee_id,
+                'must_change_password' => $user->must_change_password,
+                'status' => $user->status,
+                'full_name' => $user->full_name,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+            ],
+        ])->cookie(
+            'token',        // Cookie name
+            $newToken,      // NEW token
+            60,             // Minutes until expiration
+            '/',            // Path
+            null,           // Domain
+            false,          // Secure
+            true,           // HttpOnly
+            false,          // Raw
+            'lax'           // SameSite policy
+        );
     }
-
-    // 👇 ADD THIS: Send password change alert email
-    try {
-        Mail::to($user->email)->send(new PasswordChangedAlert($user));
-        Log::info('Password change alert sent to: ' . $user->email);
-    } catch (\Exception $e) {
-        Log::error('Failed to send password change email: ' . $e->getMessage());
-    }
-
-    // 👇 Generate a NEW token with updated user data
-    $newToken = JWTAuth::fromUser($user->fresh());
-
-    // Return response WITH NEW cookie
-    return response()->json([
-        'message' => 'Password updated successfully.',
-        'user' => [
-            'id' => $user->id,
-            'email' => $user->email,
-            'employee_id' => $user->employee_id,
-            'must_change_password' => $user->must_change_password,
-            'status' => $user->status,
-        ],
-    ])->cookie(
-        'token',        // Cookie name
-        $newToken,      // NEW token
-        60,             // Minutes until expiration
-        '/',            // Path
-        null,           // Domain
-        false,          // Secure
-        true,           // HttpOnly
-        false,          // Raw
-        'lax'           // SameSite policy
-    );
-}
-
-
 
 public function createUser(CreateUserRequest $request)
 {
     $data = $request->validated();
 
-    $user = $this->userService->createUser($data);
-
-    return response()->json([
-        'message' => 'User created successfully.',
-        'user' => $user,
-    ], 201);
-}
-
-
-public function getAllUsers(Request $request)
-{
     try {
-        // Only select columns that actually exist in your table
-        $users = User::all(['id', 'email', 'employee_id', 'status', 'must_change_password', 'last_login_at']);
+        $user = $this->userService->createUser($data);
         
         return response()->json([
             'success' => true,
-            'users' => $users
-        ]);
-    } catch (\Exception $e) {
+            'message' => 'User created successfully.',
+            'user' => [
+                'id' => $user->id,
+                'email' => $user->email,
+                'employee_id' => $user->employee_id,
+            ],
+        ], 201);
+        
+    } catch (\InvalidArgumentException $e) {
+        // Handle validation errors (like wrong domain)
         return response()->json([
             'success' => false,
-            'message' => 'Failed to fetch users: ' . $e->getMessage()
+            'message' => $e->getMessage(),
+        ], 422);
+        
+    } catch (\Exception $e) {
+        // Handle other errors (cPanel failure, etc.)
+        return response()->json([
+            'success' => false,
+            'message' => $e->getMessage(),
         ], 500);
     }
 }
 
-
-
-public function logout(Request $request)
-{
-    try {
-        JWTAuth::invalidate(JWTAuth::getToken());
-        
-        // Clear the cookie by setting it to expire in the past
-        return response()->json(['message' => 'Logged out successfully.'])
-            ->cookie('token', '', -1); // Expire immediately
-    } catch (\Exception $e) {
-        return response()->json(['message' => 'Failed to logout, token may be invalid.'], 400);
+    public function getAllUsers(Request $request)
+    {
+        try {
+            // Only select columns that actually exist in your table
+            $users = User::all(['id', 'email', 'employee_id', 'status', 'must_change_password', 'last_login_at']);
+            
+            // Add full_name to each user
+            $usersWithNames = $users->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'email' => $user->email,
+                    'employee_id' => $user->employee_id,
+                    'status' => $user->status,
+                    'must_change_password' => $user->must_change_password,
+                    'last_login_at' => $user->last_login_at,
+                    'full_name' => $user->full_name,
+                    'first_name' => $user->first_name,
+                    'last_name' => $user->last_name,
+                ];
+            });
+            
+            return response()->json([
+                'success' => true,
+                'users' => $usersWithNames
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch users: ' . $e->getMessage()
+            ], 500);
+        }
     }
-}
+
+    public function logout(Request $request)
+    {
+        try {
+            JWTAuth::invalidate(JWTAuth::getToken());
+            
+            // Clear the cookie by setting it to expire in the past
+            return response()->json(['message' => 'Logged out successfully.'])
+                ->cookie('token', '', -1); // Expire immediately
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Failed to logout, token may be invalid.'], 400);
+        }
+    }
 
     public function unlockUser(UnlockUserRequest $request)
-{
-    $user = User::find($request->user_id);
-    
-    $success = $this->userService->unlockUser($user);
-    
-    if (!$success) {
-        return response()->json(['message' => 'User is not locked or could not be unlocked.'], 400);
+    {
+        $user = User::find($request->user_id);
+        
+        $success = $this->userService->unlockUser($user);
+        
+        if (!$success) {
+            return response()->json(['message' => 'User is not locked or could not be unlocked.'], 400);
+        }
+        
+        return response()->json(['message' => 'User unlocked successfully.']);
     }
-    
-    return response()->json(['message' => 'User unlocked successfully.']);
-}
 
 public function me(Request $request)
 {
     try {
-        // Get token from cookie
         $token = $request->cookie('token');
         
         if (!$token) {
@@ -193,7 +225,6 @@ public function me(Request $request)
             ], 401);
         }
         
-        // Authenticate user with token from cookie
         $user = JWTAuth::setToken($token)->authenticate();
         
         if (!$user) {
@@ -203,7 +234,6 @@ public function me(Request $request)
             ], 404);
         }
         
-        // Return user data
         return response()->json([
             'success' => true,
             'user' => [
@@ -212,9 +242,10 @@ public function me(Request $request)
                 'employee_id' => $user->employee_id,
                 'must_change_password' => $user->must_change_password,
                 'status' => $user->status,
-                'name' => $user->name ?? null, // if you have a name field
-                'role' => $user->role ?? null, // if you have a role field
-                // Add any other user fields you need
+                'full_name' => $user->full_name,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'last_login_at' => $user->last_login_at, // ADD THIS LINE
             ]
         ]);
         
