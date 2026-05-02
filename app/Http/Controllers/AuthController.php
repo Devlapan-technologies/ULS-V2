@@ -266,4 +266,16 @@ public function me(Request $request)
         ], 401);
     }
 }
+
+public function lockUser(Request $request)
+{
+    $request->validate(['user_id' => 'required|integer|exists:users,id']);
+    $user = User::find($request->user_id);
+    if ($user->status === 'locked') {
+        return response()->json(['message' => 'User already locked.'], 400);
+    }
+    $user->status = 'locked';
+    $user->save();
+    return response()->json(['message' => 'User locked successfully.']);
+}
 }

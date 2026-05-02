@@ -53,6 +53,20 @@ class UserService
         return ['success' => true, 'message' => 'Login successful.', 'user' => $user];
     }
 
+    public function lockUser(Request $request)
+{
+    $request->validate(['user_id' => 'required|integer|exists:users,id']);
+    $user = User::find($request->user_id);
+    if ($user->status === 'locked') {
+        return response()->json(['message' => 'User already locked.'], 400);
+    }
+    $user->status = 'locked';
+    $user->save();
+    return response()->json(['message' => 'User locked successfully.']);
+}
+
+
+
     public function isWeakPassword(string $password): bool
     {
         $weak = strlen($password) < 8 ||
@@ -96,7 +110,7 @@ class UserService
 
 public function createUser(array $data)
 {
-    // Validate email domain first
+    // Validate email domain
     if (!isset($data['email']) || !str_ends_with($data['email'], '@devlapan.com')) {
         throw new \InvalidArgumentException('Only @devlapan.com email addresses are allowed. Please use a company email.');
     }
@@ -105,32 +119,34 @@ public function createUser(array $data)
         throw new \InvalidArgumentException('Employee ID is required');
     }
 
-    // Start transaction so everything rolls back if something fails
     \DB::beginTransaction();
     
     try {
-        // Create user in database
-        $user = User::create([
-            'email' => $data['email'],
-            'password' => bcrypt($data['password']),
-            'must_change_password' => true,
-            'status' => 'active',
-            'failed_attempts' => 0,
-            'employee_id' => $data['employee_id'],
-        ]);
+        // Create user instance
+        $user = new User();
+        
+        // Set custom ID if provided
+        if (isset($data['user_id'])) {
+            $user->id = $data['user_id'];
+        }
+        
+        $user->email = $data['email'];
+        $user->password = bcrypt($data['password']);
+        $user->must_change_password = true;
+        $user->status = 'active';
+        $user->failed_attempts = 0;
+        $user->employee_id = $data['employee_id'];
+        $user->save();
 
         // Create email account in cPanel
         $cpanelResult = $this->cpanelService->createEmailAccount($data['email'], $data['password']);
         
         if (!$cpanelResult['success']) {
-            // Rollback database transaction (user won't be created)
             \DB::rollBack();
             throw new \Exception($cpanelResult['message']);
         }
         
-        // Commit transaction
         \DB::commit();
-        
         return $user;
         
     } catch (\Exception $e) {

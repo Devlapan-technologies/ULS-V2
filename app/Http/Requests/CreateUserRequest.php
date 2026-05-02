@@ -17,6 +17,7 @@ class CreateUserRequest extends FormRequest
             'email' => 'required|email|unique:users,email|ends_with:@devlapan.com',
             'password' => 'required|string|min:8',
             'employee_id' => 'required|integer',
+            'user_id' => 'nullable|integer|unique:users,id',   // allow manual ID (must not exist)
         ];
     }
 
@@ -30,6 +31,7 @@ class CreateUserRequest extends FormRequest
             'password.required' => 'Password is required.',
             'password.min' => 'Password must be at least 8 characters.',
             'employee_id.required' => 'Employee ID is required.',
+            'user_id.unique' => 'The provided user ID already exists.',
         ];
     }
 }

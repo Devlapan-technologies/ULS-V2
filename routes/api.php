@@ -26,6 +26,7 @@ Route::middleware(['auth:api'])->group(function () {
     // Change own password
     Route::post('change-password', [AuthController::class, 'changePassword']);
 
+    Route::post('admin/lock-user', [AuthController::class, 'lockUser']);
     // Logout
     Route::post('logout', [AuthController::class, 'logout']);
 
