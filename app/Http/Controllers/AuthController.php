@@ -37,6 +37,7 @@ class AuthController extends Controller
 
         $token = JWTAuth::fromUser($result['user']);
 
+       
         // Send login alert email
         try {
             Mail::to($result['user']->email)->send(new LoginAlert($result['user'], $request->ip()));
@@ -44,7 +45,7 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             // Log error but don't stop login
             Log::error('Failed to send login email: ' . $e->getMessage());
-        }
+        } 
 
         // Return response WITH cookie
         return response()->json([
@@ -72,54 +73,51 @@ class AuthController extends Controller
         );
     }
 
-    public function changePassword(ChangePasswordRequest $request)
-    {
-        $data = $request->validated();
+public function changePassword(ChangePasswordRequest $request)
+{
+    $data = $request->validated();
+    $user = User::find($data['user_id']);
 
-        $user = User::find($data['user_id']);
-
-        $success = $this->userService->changePassword($user, $data['new_password']);
-
-        if (!$success) {
-            return response()->json(['message' => 'Password is weak or common.'], 400);
-        }
-
-        // Send password change alert email
-        try {
-            Mail::to($user->email)->send(new PasswordChangedAlert($user));
-            Log::info('Password change alert sent to: ' . $user->email);
-        } catch (\Exception $e) {
-            Log::error('Failed to send password change email: ' . $e->getMessage());
-        }
-
-        // Generate a NEW token with updated user data
-        $newToken = JWTAuth::fromUser($user->fresh());
-
-        // Return response WITH NEW cookie
-        return response()->json([
-            'message' => 'Password updated successfully.',
-            'user' => [
-                'id' => $user->id,
-                'email' => $user->email,
-                'employee_id' => $user->employee_id,
-                'must_change_password' => $user->must_change_password,
-                'status' => $user->status,
-                'full_name' => $user->full_name,
-                'first_name' => $user->first_name,
-                'last_name' => $user->last_name,
-            ],
-        ])->cookie(
-            'token',        // Cookie name
-            $newToken,      // NEW token
-            60,             // Minutes until expiration
-            '/',            // Path
-            null,           // Domain
-            false,          // Secure
-            true,           // HttpOnly
-            false,          // Raw
-            'lax'           // SameSite policy
-        );
+    $success = $this->userService->changePassword($user, $data['new_password']);
+    if (!$success) {
+        return response()->json(['message' => 'Password is weak or common.'], 400);
     }
+
+    // Send alert email
+    try {
+        Mail::to($user->email)->send(new PasswordChangedAlert($user));
+    } catch (\Exception $e) {
+        Log::error('Failed to send password change email: ' . $e->getMessage());
+    }
+
+    // Generate a NEW token with updated user data
+    $token = JWTAuth::fromUser($user->fresh());   // ✅ renamed from $newToken
+
+    // Return response WITH NEW cookie (now using $token)
+    return response()->json([
+        'message' => 'Password updated successfully.',
+        'user' => [
+            'id' => $user->id,
+            'email' => $user->email,
+            'employee_id' => $user->employee_id,
+            'must_change_password' => $user->must_change_password,
+            'status' => $user->status,
+            'full_name' => $user->full_name,
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name,
+        ],
+    ])->cookie(
+        'token',        // Cookie name
+        $token,         // ✅ use $token (not $newToken)
+        60,
+        '/',
+        null,
+        false,
+        true,
+        false,
+        'lax'
+    );
+}
 
 public function createUser(CreateUserRequest $request)
 {
